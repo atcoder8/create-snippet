@@ -1,4 +1,4 @@
-use crate::code_to_snippet::{code_to_snippet_body, create_snippet};
+use crate::code_to_snippet::create_snippet;
 use clap::Parser;
 
 mod cmdline_args;
@@ -18,19 +18,16 @@ fn main() {
         })
         .collect();
 
-    if args.body_only {
-        print!("{}", code_to_snippet_body(&code));
-    } else {
-        print!(
-            "{}",
-            create_snippet(
-                &code,
-                &args.name,
-                &args.prefix,
-                &args.description,
-                args.template,
-                args.module_name.as_deref(),
-            )
-        );
-    }
+    print!(
+        "{}",
+        create_snippet(
+            &code,
+            &args.name,
+            &args.prefix,
+            &args.description,
+            args.template,
+            args.module_name.as_deref(),
+            args.body_only,
+        )
+    );
 }

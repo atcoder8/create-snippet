@@ -29,9 +29,10 @@ pub fn code_to_snippet_body(code: &[String]) -> String {
 }
 
 pub fn code_to_snippet_body_as_module(code: &[String], module_name: &str) -> String {
-    let converted_code = code
-        .iter()
-        .map(|line| format!("\t\t\t\"    {}\",", escape_code(line)));
+    let converted_code = code.iter().map(|line| {
+        let indent = if line.is_empty() { "" } else { "    " };
+        format!("\t\t\t\"{}{}\",", indent, escape_code(line))
+    });
     let converted_code = join(converted_code, "\n");
 
     format!(
@@ -53,12 +54,17 @@ pub fn create_snippet(
     description: &str,
     template: bool,
     module_name: Option<&str>,
+    body_only: bool,
 ) -> String {
     let snippet_body = if let Some(module_name) = module_name {
         code_to_snippet_body_as_module(code, module_name)
     } else {
         code_to_snippet_body(code)
     };
+
+    if body_only {
+        return snippet_body;
+    }
 
     format!(
         "\
@@ -137,15 +143,25 @@ mod tests {
         assert_eq!(
             code_to_snippet_body_as_module(
                 &[
+                    r"pub struct Shape {".to_owned(),
+                    r"    pub height: i32,".to_owned(),
+                    r"    pub width: i32,".to_owned(),
+                    r"}".to_owned(),
+                    r"".to_owned(),
                     r"pub struct Coordinate {".to_owned(),
                     r"    pub x: i32,".to_owned(),
                     r"    pub y: i32,".to_owned(),
                     r"}".to_owned(),
                 ],
-                "coordinate"
+                "rectangle"
             ),
             r#"		"body": [
-			"pub mod coordinate {",
+			"pub mod rectangle {",
+			"    pub struct Shape {",
+			"        pub height: i32,",
+			"        pub width: i32,",
+			"    }",
+			"",
 			"    pub struct Coordinate {",
 			"        pub x: i32,",
 			"        pub y: i32,",
@@ -171,6 +187,7 @@ mod tests {
             "Structure for two-dimensional coordinate.",
             false,
             Some("coordinate"),
+            false,
         );
 
         assert_eq!(
@@ -188,6 +205,38 @@ mod tests {
 		"description": "Structure for two-dimensional coordinate.",
 		"isFileTemplate": false,
 	},"#,
+        )
+    }
+
+    #[test]
+    fn test_create_snippet_body_only() {
+        let code = [
+            r"pub struct Coordinate {".to_owned(),
+            r"    pub x: i32,".to_owned(),
+            r"    pub y: i32,".to_owned(),
+            r"}".to_owned(),
+        ];
+
+        let snippet = create_snippet(
+            &code,
+            "[module] coordinate",
+            "module-coordinate",
+            "Structure for two-dimensional coordinate.",
+            false,
+            Some("coordinate"),
+            true,
+        );
+
+        assert_eq!(
+            snippet,
+            r#"		"body": [
+			"pub mod coordinate {",
+			"    pub struct Coordinate {",
+			"        pub x: i32,",
+			"        pub y: i32,",
+			"    }",
+			"}",
+		],"#,
         )
     }
 }
